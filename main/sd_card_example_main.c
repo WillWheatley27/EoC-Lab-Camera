@@ -12,6 +12,8 @@
 #include <sys/unistd.h>
 #include <sys/stat.h>
 #include "esp_vfs_fat.h"
+#include "button.h"
+#include "mic_capture.h"
 #include "sdmmc_cmd.h"
 #include "driver/sdmmc_host.h"
 #include "sd_test_io.h"
@@ -28,27 +30,17 @@ static const char *TAG = "example";
 
 #ifdef CONFIG_EXAMPLE_DEBUG_PIN_CONNECTIONS
 const char* names[] = {"CLK", "CMD", "D0", "D1", "D2", "D3"};
-const int pins[] = {CONFIG_EXAMPLE_PIN_CLK,
-                    CONFIG_EXAMPLE_PIN_CMD,
-                    CONFIG_EXAMPLE_PIN_D0
-                    #ifdef CONFIG_EXAMPLE_SDMMC_BUS_WIDTH_4
-                    ,CONFIG_EXAMPLE_PIN_D1,
-                    CONFIG_EXAMPLE_PIN_D2,
-                    CONFIG_EXAMPLE_PIN_D3
-                    #endif
-                    };
+const int pins[] = {4, 5, 6, 7, 15, 16};
 
 const int pin_count = sizeof(pins)/sizeof(pins[0]);
 
 #if CONFIG_EXAMPLE_ENABLE_ADC_FEATURE
 const int adc_channels[] = {CONFIG_EXAMPLE_ADC_PIN_CLK,
                             CONFIG_EXAMPLE_ADC_PIN_CMD,
-                            CONFIG_EXAMPLE_ADC_PIN_D0
-                            #ifdef CONFIG_EXAMPLE_SDMMC_BUS_WIDTH_4
-                            ,CONFIG_EXAMPLE_ADC_PIN_D1,
+                            CONFIG_EXAMPLE_ADC_PIN_D0,
+                            CONFIG_EXAMPLE_ADC_PIN_D1,
                             CONFIG_EXAMPLE_ADC_PIN_D2,
                             CONFIG_EXAMPLE_ADC_PIN_D3
-                            #endif
                             };
 #endif //CONFIG_EXAMPLE_ENABLE_ADC_FEATURE
 
@@ -117,6 +109,7 @@ void app_main(void)
     sdmmc_card_t *card;
     const char mount_point[] = MOUNT_POINT;
     ESP_LOGI(TAG, "Initializing SD card");
+    button_init();
 
     // Use settings defined above to initialize SD card and mount FAT filesystem.
     // Note: esp_vfs_fat_sdmmc/sdspi_mount is all-in-one convenience functions.
@@ -165,23 +158,17 @@ void app_main(void)
 #endif
 
     // Set bus width to use:
-#ifdef CONFIG_EXAMPLE_SDMMC_BUS_WIDTH_4
     slot_config.width = 4;
-#else
-    slot_config.width = 1;
-#endif
 
     // On chips where the GPIOs used for SD card can be configured, set them in
     // the slot_config structure:
 #ifdef CONFIG_SOC_SDMMC_USE_GPIO_MATRIX
-    slot_config.clk = CONFIG_EXAMPLE_PIN_CLK;
-    slot_config.cmd = CONFIG_EXAMPLE_PIN_CMD;
-    slot_config.d0 = CONFIG_EXAMPLE_PIN_D0;
-#ifdef CONFIG_EXAMPLE_SDMMC_BUS_WIDTH_4
-    slot_config.d1 = CONFIG_EXAMPLE_PIN_D1;
-    slot_config.d2 = CONFIG_EXAMPLE_PIN_D2;
-    slot_config.d3 = CONFIG_EXAMPLE_PIN_D3;
-#endif  // CONFIG_EXAMPLE_SDMMC_BUS_WIDTH_4
+    slot_config.clk = 4;
+    slot_config.cmd = 5;
+    slot_config.d0 = 6;
+    slot_config.d1 = 7;
+    slot_config.d2 = 15;
+    slot_config.d3 = 16;
 #endif  // CONFIG_SOC_SDMMC_USE_GPIO_MATRIX
 
     // Enable internal pullups on enabled pins. The internal pullups
@@ -218,6 +205,12 @@ void app_main(void)
     snprintf(data, EXAMPLE_MAX_CHAR_SIZE, "%s %s!\n", "Hello", card->cid.name);
     ret = s_example_write_file(file_hello, data);
     if (ret != ESP_OK) {
+        return;
+    }
+
+    ret = mic_capture_to_file(MOUNT_POINT"/mic.wav", 0);
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "Mic capture failed");
         return;
     }
 

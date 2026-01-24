@@ -3,18 +3,39 @@
 #include <stdint.h>
 
 #include "driver/gpio.h"
+#include "driver/ledc.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "esp_log.h"
+#include "oled_ssd1306.h"
 
 #define BUTTON_GPIO GPIO_NUM_1
+#define BUZZER_GPIO GPIO_NUM_2
 #define DEBOUNCE_MS 30
 #define LONG_PRESS_MS 500
+#define BUZZER_PULSE_MS 50
+#define BUZZER_FREQ_HZ 2000
+#define BUZZER_DUTY_RES LEDC_TIMER_10_BIT
 
 static const char *TAG = "button";
 
 static volatile bool s_paused = false;
 static volatile bool s_recording = false;
+
+static void s_log_info(const char *text)
+{
+    ESP_LOGI(TAG, "%s", text);
+    oled_ssd1306_display_text(text);
+}
+
+static void s_buzzer_pulse(void)
+{
+    ledc_set_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0, (1 << BUZZER_DUTY_RES) / 2);
+    ledc_update_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0);
+    vTaskDelay(pdMS_TO_TICKS(BUZZER_PULSE_MS));
+    ledc_set_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0, 0);
+    ledc_update_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0);
+}
 
 static void s_button_task(void *arg)
 {
@@ -35,16 +56,17 @@ static void s_button_task(void *arg)
                     TickType_t held = xTaskGetTickCount() - press_tick;
                     if (held >= pdMS_TO_TICKS(LONG_PRESS_MS)) {
                         s_recording = !s_recording;
-                        ESP_LOGI(TAG, "%s", s_recording ? "Recording started" : "Recording stopped");
+                        s_log_info(s_recording ? "Recording started" : "Recording stopped");
                         if (!s_recording) {
                             s_paused = false;
                         }
                     } else {
                         if (s_recording) {
                             s_paused = !s_paused;
-                            ESP_LOGI(TAG, "%s", s_paused ? "Paused" : "Resumed");
+                            s_log_info(s_paused ? "Paused" : "Resumed");
                         }
                     }
+                    s_buzzer_pulse();
                 }
             }
         }
@@ -62,6 +84,26 @@ void button_init(void)
         .intr_type = GPIO_INTR_DISABLE,
     };
     gpio_config(&cfg);
+
+    ledc_timer_config_t buzzer_timer = {
+        .speed_mode = LEDC_LOW_SPEED_MODE,
+        .timer_num = LEDC_TIMER_0,
+        .duty_resolution = BUZZER_DUTY_RES,
+        .freq_hz = BUZZER_FREQ_HZ,
+        .clk_cfg = LEDC_AUTO_CLK,
+    };
+    ledc_timer_config(&buzzer_timer);
+
+    ledc_channel_config_t buzzer_channel = {
+        .speed_mode = LEDC_LOW_SPEED_MODE,
+        .channel = LEDC_CHANNEL_0,
+        .timer_sel = LEDC_TIMER_0,
+        .intr_type = LEDC_INTR_DISABLE,
+        .gpio_num = BUZZER_GPIO,
+        .duty = 0,
+        .hpoint = 0,
+    };
+    ledc_channel_config(&buzzer_channel);
 
     xTaskCreate(s_button_task, "button_task", 2048, NULL, 10, NULL);
 }

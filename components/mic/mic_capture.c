@@ -5,18 +5,42 @@
 #include <string.h>
 #include <errno.h>
 #include <unistd.h>
+#include <stdarg.h>
 
 #include "esp_log.h"
 #include "button.h"
 #include "driver/i2s_std.h"
 #include "freertos/FreeRTOS.h"
+#include "oled_ssd1306.h"
 
 #define I2S_SAMPLE_RATE_HZ 16000
-#define I2S_BCLK_IO        9
-#define I2S_WS_IO          10
-#define I2S_DIN_IO         11
+#define I2S_BCLK_IO        19
+#define I2S_WS_IO          20
+#define I2S_DIN_IO         21
 
 static const char *TAG = "mic";
+
+static void s_log_info(const char *fmt, ...)
+{
+    char buf[64];
+    va_list args;
+    va_start(args, fmt);
+    vsnprintf(buf, sizeof(buf), fmt, args);
+    va_end(args);
+    ESP_LOGI(TAG, "%s", buf);
+    oled_ssd1306_display_text(buf);
+}
+
+static void s_log_error(const char *fmt, ...)
+{
+    char buf[64];
+    va_list args;
+    va_start(args, fmt);
+    vsnprintf(buf, sizeof(buf), fmt, args);
+    va_end(args);
+    ESP_LOGE(TAG, "%s", buf);
+    oled_ssd1306_display_text(buf);
+}
 
 static void s_write_le16(FILE *f, uint16_t value)
 {
@@ -71,13 +95,13 @@ esp_err_t mic_capture_to_file(const char *path, int seconds)
 
     ret = i2s_new_channel(&chan_cfg, NULL, &rx_handle);
     if (ret != ESP_OK) {
-        ESP_LOGE(TAG, "Failed to create I2S channel (%s)", esp_err_to_name(ret));
+        s_log_error("I2S channel create (%s)", esp_err_to_name(ret));
         return ret;
     }
 
     i2s_std_config_t std_cfg = {
         .clk_cfg = I2S_STD_CLK_DEFAULT_CONFIG(I2S_SAMPLE_RATE_HZ),
-        .slot_cfg = I2S_STD_MSB_SLOT_DEFAULT_CONFIG(I2S_DATA_BIT_WIDTH_32BIT, I2S_SLOT_MODE_MONO),
+        .slot_cfg = I2S_STD_PHILIPS_SLOT_DEFAULT_CONFIG(I2S_DATA_BIT_WIDTH_32BIT, I2S_SLOT_MODE_MONO),
         .gpio_cfg = {
             .mclk = I2S_GPIO_UNUSED,
             .bclk = I2S_BCLK_IO,
@@ -95,27 +119,27 @@ esp_err_t mic_capture_to_file(const char *path, int seconds)
 
     ret = i2s_channel_init_std_mode(rx_handle, &std_cfg);
     if (ret != ESP_OK) {
-        ESP_LOGE(TAG, "Failed to init I2S standard mode (%s)", esp_err_to_name(ret));
+        s_log_error("I2S init std mode (%s)", esp_err_to_name(ret));
         i2s_del_channel(rx_handle);
         return ret;
     }
 
     ret = i2s_channel_enable(rx_handle);
     if (ret != ESP_OK) {
-        ESP_LOGE(TAG, "Failed to enable I2S channel (%s)", esp_err_to_name(ret));
+        s_log_error("I2S enable (%s)", esp_err_to_name(ret));
         i2s_del_channel(rx_handle);
         return ret;
     }
 
-    ESP_LOGI(TAG, "Waiting for long press to start recording");
+    s_log_info("Waiting for long press");
     while (!button_is_recording()) {
         vTaskDelay(pdMS_TO_TICKS(50));
     }
-    ESP_LOGI(TAG, "Recording started");
+    s_log_info("Recording started");
 
     FILE *f = fopen(path, "wb");
     if (f == NULL) {
-        ESP_LOGE(TAG, "Failed to open %s for audio capture (errno=%d)", path, errno);
+        s_log_error("Open failed %s (%d)", path, errno);
         i2s_channel_disable(rx_handle);
         i2s_del_channel(rx_handle);
         return ESP_FAIL;
@@ -134,7 +158,7 @@ esp_err_t mic_capture_to_file(const char *path, int seconds)
     const size_t chunk_bytes = samples_per_chunk * bytes_per_sample;
     uint8_t *buffer = (uint8_t *)malloc(chunk_bytes);
     if (buffer == NULL) {
-        ESP_LOGE(TAG, "Failed to allocate audio buffer");
+        s_log_error("Audio buffer alloc failed");
         fclose(f);
         i2s_channel_disable(rx_handle);
         i2s_del_channel(rx_handle);
@@ -148,7 +172,7 @@ esp_err_t mic_capture_to_file(const char *path, int seconds)
     }
     while (captured_samples < total_samples) {
         if (stop_on_button && !button_is_recording()) {
-            ESP_LOGI(TAG, "Stop requested");
+            s_log_info("Stop requested");
             break;
         }
         size_t bytes_read = 0;
@@ -160,7 +184,7 @@ esp_err_t mic_capture_to_file(const char *path, int seconds)
 
         ret = i2s_channel_read(rx_handle, buffer, bytes_to_read, &bytes_read, pdMS_TO_TICKS(1000));
         if (ret != ESP_OK) {
-            ESP_LOGE(TAG, "I2S read failed (%s)", esp_err_to_name(ret));
+            s_log_error("I2S read failed (%s)", esp_err_to_name(ret));
             break;
         }
         if (bytes_read > 0) {
@@ -194,6 +218,6 @@ esp_err_t mic_capture_to_file(const char *path, int seconds)
     i2s_del_channel(rx_handle);
 
     int captured_seconds = (int)(captured_samples / I2S_SAMPLE_RATE_HZ);
-    ESP_LOGI(TAG, "Captured %d seconds of audio to %s", captured_seconds, path);
+    s_log_info("Captured %d sec to %s", captured_seconds, path);
     return ret;
 }

@@ -292,10 +292,10 @@ void app_main(void)
     esp_err_t ret;
 
     ESP_LOGI(TAG, "Initializing SD card");
-    button_init();
     if (oled_ssd1306_init() != ESP_OK) {
         ESP_LOGE(TAG, "OLED init failed");
     }
+    button_init();
 
     sdmmc_card_t *card = NULL;
     ret = s_storage_init_sdmmc(&card);
@@ -347,10 +347,20 @@ void app_main(void)
 
         char mic_path[EXAMPLE_MAX_CHAR_SIZE];
         snprintf(mic_path, sizeof(mic_path), MOUNT_POINT"/mic_%04u.wav", (unsigned)file_index);
-        ret = mic_capture_to_file(mic_path, 0);
+        int captured_seconds = 0;
+        ret = mic_capture_to_file(mic_path, 0, &captured_seconds);
         if (ret != ESP_OK) {
             ESP_LOGE(TAG, "Mic capture failed");
         } else {
+            char line1[32];
+            const char *filename = strrchr(mic_path, '/');
+            if (filename != NULL) {
+                filename++;
+            } else {
+                filename = mic_path;
+            }
+            snprintf(line1, sizeof(line1), "Recorded %ds at", captured_seconds);
+            button_set_idle_display(line1, filename);
             file_index++;
         }
 

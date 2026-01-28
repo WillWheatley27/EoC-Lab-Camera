@@ -21,11 +21,12 @@ static const char *TAG = "button";
 
 static volatile bool s_paused = false;
 static volatile bool s_recording = false;
+static volatile TickType_t s_record_start_tick = 0;
+static char s_status_line[64] = "Ready";
 
 static void s_log_info(const char *text)
 {
     ESP_LOGI(TAG, "%s", text);
-    oled_ssd1306_display_text(text);
 }
 
 static void s_buzzer_pulse(void)
@@ -35,6 +36,31 @@ static void s_buzzer_pulse(void)
     vTaskDelay(pdMS_TO_TICKS(BUZZER_PULSE_MS));
     ledc_set_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0, 0);
     ledc_update_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0);
+}
+
+static void s_oled_task(void *arg)
+{
+    (void)arg;
+    char buffer[64];
+    while (true) {
+        if (s_recording) {
+            TickType_t elapsed_ticks = xTaskGetTickCount() - s_record_start_tick;
+            uint32_t elapsed_seconds = (uint32_t)(elapsed_ticks / configTICK_RATE_HZ);
+            uint32_t hours = elapsed_seconds / 3600;
+            uint32_t minutes = (elapsed_seconds % 3600) / 60;
+            uint32_t seconds = elapsed_seconds % 60;
+            const char *line2 = s_paused ? "Paused" : "Recording";
+            snprintf(buffer, sizeof(buffer), "%02lu:%02lu:%02lu\n%s",
+                     (unsigned long)hours,
+                     (unsigned long)minutes,
+                     (unsigned long)seconds,
+                     line2);
+            oled_ssd1306_display_text(buffer);
+        } else {
+            oled_ssd1306_display_text(s_status_line);
+        }
+        vTaskDelay(pdMS_TO_TICKS(1000));
+    }
 }
 
 static void s_button_task(void *arg)
@@ -55,15 +81,20 @@ static void s_button_task(void *arg)
                 } else {
                     TickType_t held = xTaskGetTickCount() - press_tick;
                     if (held >= pdMS_TO_TICKS(LONG_PRESS_MS)) {
-                        s_recording = !s_recording;
-                        s_log_info(s_recording ? "Recording started" : "Recording stopped");
-                        if (!s_recording) {
+                        if (s_recording) {
+                            s_recording = false;
                             s_paused = false;
+                            s_log_info("Recording stopped");
+                        } else {
+                            s_recording = true;
+                            s_paused = false;
+                            s_record_start_tick = xTaskGetTickCount();
+                            s_log_info("Recording started");
                         }
                     } else {
                         if (s_recording) {
                             s_paused = !s_paused;
-                            s_log_info(s_paused ? "Paused" : "Resumed");
+                            s_log_info(s_paused ? "Paused" : "Recording");
                         }
                     }
                     s_buzzer_pulse();
@@ -106,6 +137,18 @@ void button_init(void)
     ledc_channel_config(&buzzer_channel);
 
     xTaskCreate(s_button_task, "button_task", 2048, NULL, 10, NULL);
+    xTaskCreate(s_oled_task, "oled_task", 2048, NULL, 5, NULL);
+}
+
+void button_set_idle_display(const char *line1, const char *line2)
+{
+    if (line1 == NULL) {
+        line1 = "";
+    }
+    if (line2 == NULL) {
+        line2 = "";
+    }
+    snprintf(s_status_line, sizeof(s_status_line), "%s\n%s", line1, line2);
 }
 
 bool button_is_paused(void)

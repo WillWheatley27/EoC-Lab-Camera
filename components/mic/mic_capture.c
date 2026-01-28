@@ -28,7 +28,7 @@ static void s_log_info(const char *fmt, ...)
     vsnprintf(buf, sizeof(buf), fmt, args);
     va_end(args);
     ESP_LOGI(TAG, "%s", buf);
-    oled_ssd1306_display_text(buf);
+    //oled_ssd1306_display_text(buf);
 }
 
 static void s_log_error(const char *fmt, ...)
@@ -87,7 +87,7 @@ static void s_write_wav_header(FILE *f, uint32_t sample_rate_hz, uint16_t bits_p
     s_write_le32(f, data_bytes);
 }
 
-esp_err_t mic_capture_to_file(const char *path, int seconds)
+esp_err_t mic_capture_to_file(const char *path, int seconds, int *out_seconds)
 {
     esp_err_t ret;
     i2s_chan_handle_t rx_handle = NULL;
@@ -218,6 +218,9 @@ esp_err_t mic_capture_to_file(const char *path, int seconds)
     i2s_del_channel(rx_handle);
 
     int captured_seconds = (int)(captured_samples / I2S_SAMPLE_RATE_HZ);
+    if (out_seconds != NULL) {
+        *out_seconds = captured_seconds;
+    }
     s_log_info("Captured %d sec to %s", captured_seconds, path);
     return ret;
 }

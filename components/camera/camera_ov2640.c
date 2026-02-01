@@ -17,10 +17,11 @@ void camera_ov2640_get_default_pins(camera_ov2640_pins_t *pins)
         .pin_d7 = 17,
         .pin_pclk = 18,
         .pin_vsync = 21,
-        .pin_href = 35,
-        .pin_xclk = 36,
-        .pin_sda = 47,
-        .pin_scl = 48,
-        .pin_pwdn = 37,
+        .pin_href = 46,
+        .pin_xclk = 3,
+        .pin_sda = 41,
+        .pin_scl = 42,
+        .pin_pwdn = 45,
+        .pin_reset = 47,
     };
 }

@@ -21,6 +21,7 @@ typedef struct {
     int pin_sda;
     int pin_scl;
     int pin_pwdn;
+    int pin_reset;
 } camera_ov2640_pins_t;
 
 void camera_ov2640_get_default_pins(camera_ov2640_pins_t *pins);

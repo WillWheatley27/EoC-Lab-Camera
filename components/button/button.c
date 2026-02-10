@@ -43,6 +43,30 @@ static void s_buzzer_pulse(void)
     ledc_update_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0);
 }
 
+static void s_handle_short_press(void)
+{
+    if (s_recording) {
+        s_paused = !s_paused;
+        s_log_info(s_paused ? "Paused" : "Recording");
+    }
+    s_buzzer_pulse();
+}
+
+static void s_handle_long_press(void)
+{
+    if (s_recording) {
+        s_recording = false;
+        s_paused = false;
+        s_log_info("Recording stopped");
+    } else {
+        s_recording = true;
+        s_paused = false;
+        s_record_start_tick = xTaskGetTickCount();
+        s_log_info("Recording started");
+    }
+    s_buzzer_pulse();
+}
+
 // Updates the OLED with timer/status once per second.
 static void s_oled_task(void *arg)
 {
@@ -106,23 +130,10 @@ static void s_button_task(void *arg)
                 } else {
                     TickType_t held = xTaskGetTickCount() - press_tick;
                     if (held >= pdMS_TO_TICKS(LONG_PRESS_MS)) {
-                        if (s_recording) {
-                            s_recording = false;
-                            s_paused = false;
-                            s_log_info("Recording stopped");
-                        } else {
-                            s_recording = true;
-                            s_paused = false;
-                            s_record_start_tick = xTaskGetTickCount();
-                            s_log_info("Recording started");
-                        }
+                        s_handle_long_press();
                     } else {
-                        if (s_recording) {
-                            s_paused = !s_paused;
-                            s_log_info(s_paused ? "Paused" : "Recording");
-                        }
+                        s_handle_short_press();
                     }
-                    s_buzzer_pulse();
                 }
             }
         }
@@ -162,7 +173,7 @@ void button_init(void)
     };
     ledc_channel_config(&buzzer_channel);
 
-    xTaskCreate(s_button_task, "button_task", 2048, NULL, 10, NULL);
+    xTaskCreate(s_button_task, "button_task", 4096, NULL, 10, NULL);
     xTaskCreate(s_oled_task, "oled_task", 4096, NULL, 5, NULL);
 }
 
@@ -188,4 +199,14 @@ bool button_is_paused(void)
 bool button_is_recording(void)
 {
     return s_recording;
+}
+
+void button_trigger_short_press(void)
+{
+    s_handle_short_press();
+}
+
+void button_trigger_long_press(void)
+{
+    s_handle_long_press();
 }

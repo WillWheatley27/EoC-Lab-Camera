@@ -19,6 +19,7 @@
 #include "freertos/task.h"
 #include "esp_log.h"
 #include "button.h"
+#include "ble_trigger.h"
 #include "mic_capture.h"
 #include "oled_ssd1306.h"
 #include "camera_ov2640.h"
@@ -42,6 +43,7 @@ static const char *TAG = "example";
 #define OLED_I2C_SDA       41
 #define OLED_I2C_SCL       42
 #define I2C_SHARED_FREQ_HZ 100000
+
 
 static void s_oled_sd_warning(const char *detail)
 {
@@ -350,6 +352,7 @@ void app_main(void)
         ESP_LOGE(TAG, "OLED init failed");
     }
     button_init();
+    ble_trigger_init();
 
     sdmmc_card_t *card = NULL;
     ret = s_storage_init_sdmmc(&card);

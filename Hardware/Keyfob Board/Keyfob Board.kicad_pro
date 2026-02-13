@@ -250,7 +250,7 @@
     "pinned_symbol_libs": []
   },
   "meta": {
-    "filename": "Prototype.kicad_pro",
+    "filename": "Keyfob Board.kicad_pro",
     "version": 3
   },
   "net_settings": {
@@ -408,6 +408,11 @@
     "subpart_first_id": 65,
     "subpart_id_separator": 0
   },
-  "sheets": [],
+  "sheets": [
+    [
+      "50d63360-e697-4fd6-bac2-a3cd48850cb1",
+      "Root"
+    ]
+  ],
   "text_variables": {}
 }

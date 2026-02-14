@@ -127,7 +127,13 @@ static esp_err_t s_i2c_write(uint8_t control, const uint8_t *data, size_t len)
         memcpy(&buffer[1], data, len);
     }
 
-    return i2c_master_write_to_device(i2c_bus_get_port(), OLED_I2C_ADDR, buffer, 1 + len, pdMS_TO_TICKS(200));
+    esp_err_t ret = i2c_bus_lock(pdMS_TO_TICKS(200));
+    if (ret != ESP_OK) {
+        return ret;
+    }
+    ret = i2c_master_write_to_device(i2c_bus_get_port(), OLED_I2C_ADDR, buffer, 1 + len, pdMS_TO_TICKS(200));
+    i2c_bus_unlock();
+    return ret;
 }
 
 static esp_err_t s_write_cmd(uint8_t cmd)

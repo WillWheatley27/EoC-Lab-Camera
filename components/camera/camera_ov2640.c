@@ -42,7 +42,7 @@ void camera_ov2640_get_default_pins(camera_ov2640_pins_t *pins)
     };
 }
 
-#define VIDEO_FRAME_SIZE   FRAMESIZE_QQVGA
+#define VIDEO_FRAME_SIZE   FRAMESIZE_VGA
 #define VIDEO_JPEG_QUALITY 12
 #define VIDEO_XCLK_HZ      10000000
 #define VIDEO_FLUSH_BYTES  (4 * 1024 * 1024)
@@ -63,6 +63,14 @@ static bool s_psram_ok = false;
 static void s_frame_size_to_dim(framesize_t size, int *width, int *height)
 {
     switch (size) {
+        case FRAMESIZE_QQVGA:
+            *width = 160;
+            *height = 120;
+            break;
+        case FRAMESIZE_QVGA:
+            *width = 320;
+            *height = 240;
+            break;
         case FRAMESIZE_VGA:
             *width = 640;
             *height = 480;

@@ -1,12 +1,16 @@
 #include "ble_trigger.h"
 
 #include <string.h>
+#include <stdio.h>
+#include <stdbool.h>
 
 #include "esp_log.h"
 #include "esp_timer.h"
 #include "nvs_flash.h"
 #include "sdkconfig.h"
 #include "button.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/portmacro.h"
 
 #if CONFIG_BT_NIMBLE_ENABLED
 #include "esp_nimble_hci.h"
@@ -17,70 +21,75 @@
 #include "host/util/util.h"
 #endif
 
-// BLE trigger UUIDs (128-bit). Use distinct UUIDs for short vs long press.
-#define BLE_TRIGGER_UUID_SHORT "00000000-0000-0000-0000-000000000001"
-#define BLE_TRIGGER_UUID_LONG  "00000000-0000-0000-0000-000000000002"
 #define BLE_TRIGGER_DEBOUNCE_MS 500
 
 static const char *TAG = "ble_trigger";
 
 #if CONFIG_BT_NIMBLE_ENABLED
 static uint8_t s_ble_own_addr_type;
-static ble_uuid128_t s_ble_short_uuid;
-static ble_uuid128_t s_ble_long_uuid;
 static int64_t s_ble_last_trigger_us = 0;
+static portMUX_TYPE s_ble_lock = portMUX_INITIALIZER_UNLOCKED;
+static char s_ble_timestamp[32] = {0};
+static bool s_ble_timestamp_valid = false;
+static const uint8_t s_ble_prefix_be[8] = {0xA1, 0xB2, 0xC3, 0xD4, 0xEE, 0xEE, 0xFF, 0xFF};
 
-static int s_ble_hex_val(char c)
+static bool s_ble_uuid_match_prefix(const uint8_t be[16])
 {
-    if (c >= '0' && c <= '9') {
-        return c - '0';
-    }
-    if (c >= 'a' && c <= 'f') {
-        return 10 + (c - 'a');
-    }
-    if (c >= 'A' && c <= 'F') {
-        return 10 + (c - 'A');
-    }
-    return -1;
-}
-
-static bool s_ble_parse_uuid128_le(const char *uuid_str, uint8_t out_le[16])
-{
-    uint8_t be[16];
-    int idx = 0;
-    for (const char *p = uuid_str; *p != '\0'; ++p) {
-        if (*p == '-') {
-            continue;
-        }
-        int hi = s_ble_hex_val(*p);
-        if (hi < 0) {
+    for (int i = 0; i < 8; ++i) {
+        if (be[i] != s_ble_prefix_be[i]) {
             return false;
         }
-        ++p;
-        if (*p == '\0') {
-            return false;
-        }
-        int lo = s_ble_hex_val(*p);
-        if (lo < 0) {
-            return false;
-        }
-        if (idx >= 16) {
-            return false;
-        }
-        be[idx++] = (uint8_t)((hi << 4) | lo);
-    }
-    if (idx != 16) {
-        return false;
-    }
-    for (int i = 0; i < 16; ++i) {
-        out_le[i] = be[15 - i];
     }
     return true;
 }
 
-static bool s_ble_uuid_match(const ble_uuid128_t *adv_uuid, const ble_uuid128_t *target)
+static bool s_ble_extract_trigger(const ble_uuid128_t *adv_uuid, bool *out_long, char *out_ts, size_t out_ts_size)
 {
-    return ble_uuid_cmp((const ble_uuid_t *)adv_uuid, (const ble_uuid_t *)target) == 0;
+    if (out_ts_size < 16) {
+        return false;
+    }
+
+    uint8_t be[16];
+    for (int i = 0; i < 16; ++i) {
+        be[i] = adv_uuid->value[15 - i];
+    }
+
+    if (!s_ble_uuid_match_prefix(be)) {
+        return false;
+    }
+
+    if (be[8] == 0x01) {
+        *out_long = false;
+    } else if (be[8] == 0x02) {
+        *out_long = true;
+    } else {
+        return false;
+    }
+
+    char digits[13];
+    int pos = 0;
+    for (int i = 10; i < 16; ++i) {
+        int hi = (be[i] >> 4) & 0x0F;
+        int lo = be[i] & 0x0F;
+        if (hi > 9 || lo > 9) {
+            return false;
+        }
+        digits[pos++] = (char)('0' + hi);
+        digits[pos++] = (char)('0' + lo);
+    }
+    digits[12] = '\0';
+
+    snprintf(out_ts, out_ts_size, "20%.6s_%.6s", digits, digits + 6);
+    return true;
+}
+
+static void s_ble_store_timestamp(const char *timestamp)
+{
+    portENTER_CRITICAL(&s_ble_lock);
+    strncpy(s_ble_timestamp, timestamp, sizeof(s_ble_timestamp) - 1);
+    s_ble_timestamp[sizeof(s_ble_timestamp) - 1] = '\0';
+    s_ble_timestamp_valid = true;
+    portEXIT_CRITICAL(&s_ble_lock);
 }
 
 static void s_ble_handle_trigger(bool is_long)
@@ -108,11 +117,15 @@ static int s_ble_gap_event(struct ble_gap_event *event, void *arg)
         bool found_short = false;
         bool found_long = false;
         for (int i = 0; i < fields.num_uuids128; ++i) {
-            if (s_ble_uuid_match(&fields.uuids128[i], &s_ble_short_uuid)) {
-                found_short = true;
-            }
-            if (s_ble_uuid_match(&fields.uuids128[i], &s_ble_long_uuid)) {
-                found_long = true;
+            bool is_long = false;
+            char timestamp[32];
+            if (s_ble_extract_trigger(&fields.uuids128[i], &is_long, timestamp, sizeof(timestamp))) {
+                s_ble_store_timestamp(timestamp);
+                if (is_long) {
+                    found_long = true;
+                } else {
+                    found_short = true;
+                }
             }
         }
         if (found_long) {
@@ -165,18 +178,6 @@ void ble_trigger_init(void)
         return;
     }
 
-    uint8_t short_le[16];
-    uint8_t long_le[16];
-    if (!s_ble_parse_uuid128_le(BLE_TRIGGER_UUID_SHORT, short_le) ||
-        !s_ble_parse_uuid128_le(BLE_TRIGGER_UUID_LONG, long_le)) {
-        ESP_LOGE(TAG, "Invalid BLE trigger UUID format");
-        return;
-    }
-    s_ble_short_uuid.u.type = BLE_UUID_TYPE_128;
-    memcpy(s_ble_short_uuid.value, short_le, sizeof(short_le));
-    s_ble_long_uuid.u.type = BLE_UUID_TYPE_128;
-    memcpy(s_ble_long_uuid.value, long_le, sizeof(long_le));
-
     err = nimble_port_init();
     if (err != ESP_OK) {
         ESP_LOGE(TAG, "NimBLE init failed (%s)", esp_err_to_name(err));
@@ -188,4 +189,21 @@ void ble_trigger_init(void)
 #else
     ESP_LOGW(TAG, "BLE trigger disabled (CONFIG_BT_NIMBLE_ENABLED=0)");
 #endif
+}
+
+bool ble_trigger_get_timestamp(char *out, size_t out_size)
+{
+    if (out == NULL || out_size == 0) {
+        return false;
+    }
+    bool have_ts = false;
+    portENTER_CRITICAL(&s_ble_lock);
+    if (s_ble_timestamp_valid) {
+        strncpy(out, s_ble_timestamp, out_size - 1);
+        out[out_size - 1] = '\0';
+        s_ble_timestamp_valid = false;
+        have_ts = true;
+    }
+    portEXIT_CRITICAL(&s_ble_lock);
+    return have_ts;
 }

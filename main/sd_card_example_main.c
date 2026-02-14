@@ -45,17 +45,6 @@ static const char *TAG = "example";
 #define I2C_SHARED_FREQ_HZ 100000
 
 
-static void s_oled_sd_warning(const char *detail)
-{
-    if (detail == NULL) {
-        oled_ssd1306_display_text("SD mount error");
-        return;
-    }
-    char buf[32];
-    snprintf(buf, sizeof(buf), "SD %s", detail);
-    oled_ssd1306_display_text(buf);
-}
-
 #ifdef CONFIG_EXAMPLE_DEBUG_PIN_CONNECTIONS
 const char* names[] = {"CLK", "CMD", "D0", "D1", "D2", "D3"};
 const int pins[] = {4, 5, 6, 7, 15, 16};
@@ -358,7 +347,6 @@ void app_main(void)
     ret = s_storage_init_sdmmc(&card);
     if (ret != ESP_OK) {
         ESP_LOGE(TAG, "Failed to init SD card (%s)", esp_err_to_name(ret));
-        s_oled_sd_warning("init failed");
         return;
     }
 
@@ -399,29 +387,49 @@ void app_main(void)
         ret = s_switch_mount(TINYUSB_MSC_STORAGE_MOUNT_APP);
         if (ret != ESP_OK) {
             ESP_LOGE(TAG, "Failed to mount to app (%s)", esp_err_to_name(ret));
-            s_oled_sd_warning("mount failed");
             vTaskDelay(pdMS_TO_TICKS(1000));
             continue;
         }
 
         char mic_path[EXAMPLE_MAX_CHAR_SIZE];
         char video_path[EXAMPLE_MAX_CHAR_SIZE];
-        snprintf(mic_path, sizeof(mic_path), MOUNT_POINT"/mic_%04u.wav", (unsigned)file_index);
-        // Use 8.3-compatible name to avoid FATFS EINVAL when LFN is disabled.
-        snprintf(video_path, sizeof(video_path), MOUNT_POINT"/VID%04u.MJP", (unsigned)file_index);
+        char timestamp[32];
+        bool use_index_name = true;
+        if (ble_trigger_get_timestamp(timestamp, sizeof(timestamp))) {
+            snprintf(mic_path, sizeof(mic_path), MOUNT_POINT"/MIC_%s.WAV", timestamp);
+            snprintf(video_path, sizeof(video_path), MOUNT_POINT"/VID_%s.MJP", timestamp);
+            use_index_name = false;
+        } else {
+            snprintf(mic_path, sizeof(mic_path), MOUNT_POINT"/mic_%04u.wav", (unsigned)file_index);
+            // Use 8.3-compatible name to avoid FATFS EINVAL when LFN is disabled.
+            snprintf(video_path, sizeof(video_path), MOUNT_POINT"/VID%04u.MJP", (unsigned)file_index);
+        }
 
         if (!s_wait_for_mount(MOUNT_POINT, 2000)) {
             ESP_LOGE(TAG, "Mount not ready for %s", MOUNT_POINT);
-            s_oled_sd_warning("not ready");
         }
 
         if (camera_app_is_ready() && !camera_app_is_recording()) {
-            camera_app_start_record(video_path);
+            esp_err_t cam_ret = camera_app_start_record(video_path);
+            if (cam_ret != ESP_OK && !use_index_name) {
+                ESP_LOGW(TAG, "Timestamped video name failed (%s); using index", esp_err_to_name(cam_ret));
+                snprintf(video_path, sizeof(video_path), MOUNT_POINT"/VID%04u.MJP", (unsigned)file_index);
+                use_index_name = true;
+                camera_app_start_record(video_path);
+            }
         }
         int captured_seconds = 0;
         ret = mic_capture_start(mic_path, 0);
         if (ret != ESP_OK) {
-            ESP_LOGE(TAG, "Mic capture start failed");
+            if (!use_index_name) {
+                ESP_LOGW(TAG, "Timestamped mic name failed (%s); using index", esp_err_to_name(ret));
+                snprintf(mic_path, sizeof(mic_path), MOUNT_POINT"/mic_%04u.wav", (unsigned)file_index);
+                use_index_name = true;
+                ret = mic_capture_start(mic_path, 0);
+            }
+            if (ret != ESP_OK) {
+                ESP_LOGE(TAG, "Mic capture start failed");
+            }
         } else {
             ret = mic_capture_wait(&captured_seconds, portMAX_DELAY);
             if (ret != ESP_OK) {
@@ -436,7 +444,9 @@ void app_main(void)
                 }
                 snprintf(line1, sizeof(line1), "Recorded %ds at", captured_seconds);
                 button_set_idle_display(line1, filename);
-                file_index++;
+                if (use_index_name) {
+                    file_index++;
+                }
             }
         }
 

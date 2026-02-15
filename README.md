@@ -14,6 +14,7 @@ Core features:
 - USB MSC to expose the SD card when idle
 - SSD1306 I2C OLED status
 - Button + buzzer UI
+- BLE scan trigger (advertisements) with timestamped filenames
 
 Supports SD (SDSC, SDHC, SDXC) cards and eMMC.
 
@@ -135,8 +136,28 @@ PWDN and RESET are tied in hardware (PWDN -> GND, RESET -> 3.3V). In software, t
   Fix: discard the first 10 frames after init and only write frames with valid SOI/EOI markers.
 - FATFS without LFN rejected long filenames.
   Fix: use 8.3 filename `VID0001.MJP`.
+- OLED writes could overlap between tasks and hang I2C.
+  Fix: serialize OLED I2C writes with a mutex and remove SD warning OLED spam.
 
 **Playback note:** `VIDxxxx.MJP` is a raw MJPEG stream (not a container). VLC can play it; for QuickTime, convert to AVI/MP4.
+
+### BLE trigger and timestamped filenames
+
+The device scans BLE advertisements and uses a UUID-encoded timestamp to name files:
+
+- **Video:** `VID_YYYYMMDD_HHMMSS.MJP`
+- **Audio:** `MIC_YYYYMMDD_HHMMSS.WAV`
+
+If no valid BLE timestamp is seen, it falls back to the index names:
+
+- `VID0001.MJP`
+- `mic_0001.wav`
+
+**UUID format (128-bit):** `A1B2C3D4-EEEE-FFFF-TT00-YYMMDDHHMMSS`
+
+- Prefix is fixed: `A1 B2 C3 D4 EE EE FF FF`
+- `TT` = `01` short press, `02` long press
+- `YYMMDDHHMMSS` are BCD digits (base-10 nibbles)
 
 ### Button + buzzer
 

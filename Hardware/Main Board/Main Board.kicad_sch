@@ -2287,6 +2287,10 @@
 		(color 0 0 0 0)
 		(uuid "fe40d8e4-90eb-4cea-9823-c158df019e65")
 	)
+	(no_connect
+		(at 189.23 146.05)
+		(uuid "43436220-698a-43ba-aa59-eababe6ce5ee")
+	)
 	(wire
 		(pts
 			(xy 229.87 127) (xy 229.87 125.73)
@@ -3435,6 +3439,7 @@
 				(font
 					(size 1.27 1.27)
 				)
+				(hide yes)
 			)
 		)
 		(property "Footprint" ""
@@ -4223,6 +4228,7 @@
 				(font
 					(size 1.27 1.27)
 				)
+				(hide yes)
 			)
 		)
 		(property "Footprint" ""
@@ -4289,6 +4295,7 @@
 				(font
 					(size 1.27 1.27)
 				)
+				(hide yes)
 			)
 		)
 		(property "Footprint" ""
@@ -4391,6 +4398,73 @@
 			(project "Main Board"
 				(path "/06300a21-1646-41b0-b473-1c39557d6dab"
 					(reference "#PWR05")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "power:GND")
+		(at 232.41 146.05 90)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(uuid "47ba851d-e83b-4f0a-b002-28416d691504")
+		(property "Reference" "#PWR011"
+			(at 238.76 146.05 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Value" "GND"
+			(at 237.49 146.05 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Footprint" ""
+			(at 232.41 146.05 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" ""
+			(at 232.41 146.05 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "Power symbol creates a global label with name \"GND\" , ground"
+			(at 232.41 146.05 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "c0fecede-aa0f-4fc9-b290-9460c560e54e")
+		)
+		(instances
+			(project "Main Board"
+				(path "/06300a21-1646-41b0-b473-1c39557d6dab"
+					(reference "#PWR011")
 					(unit 1)
 				)
 			)
@@ -5380,6 +5454,7 @@
 				(font
 					(size 1.27 1.27)
 				)
+				(hide yes)
 			)
 		)
 		(property "Footprint" ""

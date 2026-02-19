@@ -1,0 +1,4 @@
+(sym_lib_table
+  (version 0)
+  (lib (name "Adafruit OLED 128x32 Mono I2C STEMMA QT rev B-eagle-import")(type "KiCad")(uri "${KIPRJMOD}/Adafruit OLED 128x32 Mono I2C STEMMA QT rev B-eagle-import.kicad_sym")(options "")(descr ""))
+)

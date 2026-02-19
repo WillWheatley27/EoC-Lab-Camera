@@ -54,6 +54,7 @@
       "diff_pair_dimensions": [],
       "drc_exclusions": [],
       "meta": {
+        "filename": "board_design_settings.json",
         "version": 2
       },
       "rule_severities": {
@@ -117,9 +118,9 @@
       },
       "rules": {
         "max_error": 0.005,
-        "min_clearance": 0.0,
+        "min_clearance": 0.2032,
         "min_connection": 0.0,
-        "min_copper_edge_clearance": 0.5,
+        "min_copper_edge_clearance": 0.025,
         "min_groove_width": 0.0,
         "min_hole_clearance": 0.25,
         "min_hole_to_hole": 0.25,
@@ -451,14 +452,14 @@
     "pinned_symbol_libs": []
   },
   "meta": {
-    "filename": "Main Board.kicad_pro",
+    "filename": "Adafruit OLED 128x32 Mono I2C STEMMA QT rev B.kicad_pro",
     "version": 3
   },
   "net_settings": {
     "classes": [
       {
         "bus_width": 12,
-        "clearance": 0.2,
+        "clearance": 0.2032,
         "diff_pair_gap": 0.25,
         "diff_pair_via_gap": 0.25,
         "diff_pair_width": 0.2,
@@ -467,7 +468,7 @@
         "microvia_drill": 0.1,
         "name": "Default",
         "pcb_color": "rgba(0, 0, 0, 0.000)",
-        "priority": 2147483647,
+        "priority": -1,
         "schematic_color": "rgba(0, 0, 0, 0.000)",
         "track_width": 0.2,
         "via_diameter": 0.6,
@@ -597,7 +598,7 @@
       "version": 1
     },
     "net_format_name": "",
-    "page_layout_descr_file": "",
+    "page_layout_descr_file": "empty.kicad_wks",
     "plot_directory": "",
     "space_save_all_events": true,
     "spice_current_sheet_as_root": false,
@@ -611,12 +612,8 @@
   },
   "sheets": [
     [
-      "06300a21-1646-41b0-b473-1c39557d6dab",
+      "e293fda3-f85f-419c-bfc2-e494abebd028",
       "Root"
-    ],
-    [
-      "03f9bd99-c6ab-454d-83e5-693a3468d1ed",
-      "OLED"
     ]
   ],
   "text_variables": {}

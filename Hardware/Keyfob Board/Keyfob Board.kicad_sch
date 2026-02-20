@@ -1330,6 +1330,12 @@
 		(color 0 0 0 0)
 		(uuid "43529431-9e90-46a2-a4cf-b935855a7339")
 	)
+	(junction
+		(at 147.32 110.49)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "ba9cdaff-4152-4061-9bac-bb112f471ff2")
+	)
 	(no_connect
 		(at 167.64 85.09)
 		(uuid "05140ef1-c17d-4fc3-a6e8-4f57141cd00d")
@@ -1407,8 +1413,16 @@
 		(uuid "aa56e5c9-4dc4-48dd-ae16-90d0b6110f6a")
 	)
 	(no_connect
+		(at 127 52.07)
+		(uuid "aed5ee34-f8ef-4c80-8251-5653074eced2")
+	)
+	(no_connect
 		(at 167.64 92.71)
 		(uuid "b3d98a28-7cb0-48f3-bc12-dc4b90f27bf8")
+	)
+	(no_connect
+		(at 127 46.99)
+		(uuid "b656fbc6-498b-43de-ad19-6e9981600f32")
 	)
 	(no_connect
 		(at 167.64 46.99)
@@ -1622,7 +1636,7 @@
 				(hide yes)
 			)
 		)
-		(property "Footprint" ""
+		(property "Footprint" "TestPoint:TestPoint_THTPad_D1.5mm_Drill0.7mm"
 			(at 127 80.01 0)
 			(effects
 				(font
@@ -2185,7 +2199,7 @@
 	)
 	(symbol
 		(lib_id "Connector:TestPoint")
-		(at 147.32 109.22 90)
+		(at 147.32 110.49 90)
 		(unit 1)
 		(exclude_from_sim no)
 		(in_bom yes)
@@ -2193,7 +2207,7 @@
 		(dnp no)
 		(uuid "663dcfa6-b02e-4b1c-aa20-9fde0b6d926e")
 		(property "Reference" "TP4"
-			(at 140.97 109.728 90)
+			(at 140.97 110.998 90)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -2201,7 +2215,7 @@
 			)
 		)
 		(property "Value" "TestPoint"
-			(at 141.986 112.268 90)
+			(at 141.986 113.538 90)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -2209,8 +2223,8 @@
 				(hide yes)
 			)
 		)
-		(property "Footprint" ""
-			(at 147.32 104.14 0)
+		(property "Footprint" "TestPoint:TestPoint_THTPad_D1.5mm_Drill0.7mm"
+			(at 147.32 105.41 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -2219,7 +2233,7 @@
 			)
 		)
 		(property "Datasheet" "~"
-			(at 147.32 104.14 0)
+			(at 147.32 105.41 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -2228,7 +2242,7 @@
 			)
 		)
 		(property "Description" "test point"
-			(at 147.32 109.22 0)
+			(at 147.32 110.49 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -2408,7 +2422,7 @@
 				(hide yes)
 			)
 		)
-		(property "Footprint" ""
+		(property "Footprint" "TestPoint:TestPoint_THTPad_D1.5mm_Drill0.7mm"
 			(at 127 82.55 0)
 			(effects
 				(font
@@ -2544,7 +2558,7 @@
 				(hide yes)
 			)
 		)
-		(property "Footprint" ""
+		(property "Footprint" "TestPoint:TestPoint_THTPad_D1.5mm_Drill0.7mm"
 			(at 149.86 34.29 0)
 			(effects
 				(font
@@ -2609,7 +2623,7 @@
 				(hide yes)
 			)
 		)
-		(property "Footprint" ""
+		(property "Footprint" "TestPoint:TestPoint_THTPad_D1.5mm_Drill0.7mm"
 			(at 127 85.09 0)
 			(effects
 				(font

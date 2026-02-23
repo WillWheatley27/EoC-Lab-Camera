@@ -393,11 +393,12 @@ void app_main(void)
 
         char mic_path[EXAMPLE_MAX_CHAR_SIZE];
         char video_path[EXAMPLE_MAX_CHAR_SIZE];
-        char timestamp[32];
+        char timestamp[16];
         bool use_index_name = true;
         if (ble_trigger_get_timestamp(timestamp, sizeof(timestamp))) {
-            snprintf(mic_path, sizeof(mic_path), MOUNT_POINT"/MIC_%s.WAV", timestamp);
-            snprintf(video_path, sizeof(video_path), MOUNT_POINT"/VID_%s.MJP", timestamp);
+            // 8.3-safe names using YYMMDDHH (hour resolution) for both media types.
+            snprintf(mic_path, sizeof(mic_path), MOUNT_POINT"/%s.WAV", timestamp);
+            snprintf(video_path, sizeof(video_path), MOUNT_POINT"/%s.MJP", timestamp);
             use_index_name = false;
         } else {
             snprintf(mic_path, sizeof(mic_path), MOUNT_POINT"/mic_%04u.wav", (unsigned)file_index);

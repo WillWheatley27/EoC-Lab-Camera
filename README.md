@@ -145,19 +145,20 @@ PWDN and RESET are tied in hardware (PWDN -> GND, RESET -> 3.3V). In software, t
 
 The device scans BLE advertisements and uses a UUID-encoded timestamp to name files:
 
-- **Video:** `VID_YYYYMMDD_HHMMSS.MJP`
-- **Audio:** `MIC_YYYYMMDD_HHMMSS.WAV`
+- **Video:** `MMDDHHMM.MJP`
+- **Audio:** `MMDDHHMM.WAV`
 
 If no valid BLE timestamp is seen, it falls back to the index names:
 
 - `VID0001.MJP`
 - `mic_0001.wav`
 
-**UUID format (128-bit):** `A1B2C3D4-EEEE-FFFF-TT00-YYMMDDHHMMSS`
+**UUID format (128-bit):** `00000000-0000-0000-TT00-YYMMDDHHMMSS`
 
-- Prefix is fixed: `A1 B2 C3 D4 EE EE FF FF`
+- Prefix is fixed: all zeroes (`00 00 00 00 00 00 00 00`)
 - `TT` = `01` short press, `02` long press
 - `YYMMDDHHMMSS` are BCD digits (base-10 nibbles)
+- Filenames use `MMDDHHMM` to stay 8.3-safe
 
 ### Button + buzzer
 

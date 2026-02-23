@@ -31,7 +31,7 @@ static int64_t s_ble_last_trigger_us = 0;
 static portMUX_TYPE s_ble_lock = portMUX_INITIALIZER_UNLOCKED;
 static char s_ble_timestamp[32] = {0};
 static bool s_ble_timestamp_valid = false;
-static const uint8_t s_ble_prefix_be[8] = {0xA1, 0xB2, 0xC3, 0xD4, 0xEE, 0xEE, 0xFF, 0xFF};
+static const uint8_t s_ble_prefix_be[8] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 
 static bool s_ble_uuid_match_prefix(const uint8_t be[16])
 {
@@ -45,7 +45,7 @@ static bool s_ble_uuid_match_prefix(const uint8_t be[16])
 
 static bool s_ble_extract_trigger(const ble_uuid128_t *adv_uuid, bool *out_long, char *out_ts, size_t out_ts_size)
 {
-    if (out_ts_size < 16) {
+    if (out_ts_size < 9) {
         return false;
     }
 
@@ -79,7 +79,8 @@ static bool s_ble_extract_trigger(const ble_uuid128_t *adv_uuid, bool *out_long,
     }
     digits[12] = '\0';
 
-    snprintf(out_ts, out_ts_size, "20%.6s_%.6s", digits, digits + 6);
+    // Build an 8.3-safe timestamp: MMDDHHMM (month/day/hour/minute).
+    snprintf(out_ts, out_ts_size, "%.8s", digits + 2);
     return true;
 }
 

@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <ctype.h>
 #include <stdint.h>
 #include <errno.h>
 #include <unistd.h>
@@ -155,7 +156,15 @@ static void s_write_le32(FILE *f, uint32_t value)
 static bool s_has_wav_extension(const char *path)
 {
     const char *dot = strrchr(path, '.');
-    return (dot != NULL) && (strcmp(dot, ".wav") == 0);
+    if (dot == NULL) {
+        return false;
+    }
+    if (strlen(dot) != 4) {
+        return false;
+    }
+    return (tolower((unsigned char)dot[1]) == 'w' &&
+            tolower((unsigned char)dot[2]) == 'a' &&
+            tolower((unsigned char)dot[3]) == 'v');
 }
 
 // Writes/updates a PCM WAV header.
